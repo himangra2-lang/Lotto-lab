@@ -44,8 +44,15 @@ GAMES = {
         "start": date(1985, 1, 1),
         "backfill_from": date(2010, 1, 1),
         "weekdays": lambda d: {2, 5},
-        # the results page has no per-draw links; this is the site's usual pattern
-        "draw_url": "https://www.lotteryextreme.com/canada/bc49_numbers({d})",
+        # The results page has no per-draw links, so the fetcher probes these
+        # address patterns on a known draw and keeps the first that works.
+        "draw_url_candidates": [
+            "https://www.lotteryextreme.com/canada/bc49({d})",
+            "https://www.lotteryextreme.com/canada/bc49_numbers({d})",
+            "https://www.lotteryextreme.com/canada/bc49-numbers({d})",
+            "https://www.lotteryextreme.com/canada/bc49-results({d})",
+            "https://www.lotteryextreme.com/canada/bc49_results({d})",
+        ],
         "eras": [(date(1985, 1, 1), 49)],
     },
     "dailygrand": {

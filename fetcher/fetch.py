@@ -146,7 +146,7 @@ def draw_page_template(results_html: str, game: dict) -> str | None:
         m = HREF_DATE_RE.search(a["href"])
         if m and "video" not in a["href"]:
             return urljoin(game["url"], a["href"]).replace(m.group(1), "{d}")
-    return game.get("draw_url")
+    return None
 
 
 def listed_dates(html: str) -> list[date]:
@@ -186,6 +186,15 @@ def update_game(key: str, budget: int) -> int:
     log(f"{game['name']}: results page gave {len(latest)} draws")
 
     template = draw_page_template(html, game)
+    if not template and latest:
+        probe = date.fromisoformat(latest[-1]["date"])
+        for cand in game.get("draw_url_candidates", []):
+            time.sleep(DELAY_S)
+            page = get(session, cand.format(d=probe.isoformat()))
+            if page and parse_draw_page(page, game, probe):
+                template = cand
+                log(f"{game['name']}: per-draw pages found at {cand}")
+                break
     if template and budget > 0:
         newest = max((date.fromisoformat(d) for d in draws), default=date.today())
         time.sleep(DELAY_S)

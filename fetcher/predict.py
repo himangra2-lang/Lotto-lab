@@ -110,9 +110,11 @@ class GBM:
         T = H.shape[0]
         if self.model is None or T - self.trained_at >= 25:
             Xs, ys = [], []
-            for t in range(max(50, T - 300), T):
+            for t in range(max(20, T - 300), T):
                 Xs.append(features(H[:t], N))
                 ys.append(H[t])
+            if len(Xs) < 10:
+                return m_random(H, k, N)
             X, y = np.vstack(Xs), np.concatenate(ys)
             self.model = HistGradientBoostingClassifier(max_iter=120, learning_rate=0.05, max_depth=3,
                                                         l2_regularization=1.0, random_state=0)
