@@ -4,6 +4,12 @@ on:
   schedule:
     # Daily at 09:17 UTC (about 2am in BC), after every game's evening draw
     - cron: "17 9 * * *"
+  # Also runs whenever the fetcher changes (this kicks off the first full backfill)
+  push:
+    branches: [main]
+    paths:
+      - "fetcher/**"
+      - ".github/workflows/fetch-draws.yml"
   workflow_dispatch:
     inputs:
       full:
