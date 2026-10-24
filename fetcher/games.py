@@ -5,6 +5,11 @@ Each game knows how many main numbers are drawn, the size of the number pool
 """
 from datetime import date
 
+
+def _lottomax_days(d):
+    # Friday only until Tuesday draws were added on 2019-05-14
+    return {1, 4} if d >= date(2019, 5, 14) else {4}
+
 GAMES = {
     "lottomax": {
         "name": "Lotto Max",
@@ -12,6 +17,8 @@ GAMES = {
         "main": 7,
         "bonus": "bonus",          # bonus drawn from the same pool
         "start": date(2009, 9, 25),
+        "backfill_from": date(2009, 9, 25),
+        "weekdays": _lottomax_days,
         # (first draw date of era, pool size)
         "eras": [
             (date(2009, 9, 25), 49),
@@ -25,6 +32,8 @@ GAMES = {
         "main": 6,
         "bonus": "bonus",
         "start": date(1982, 6, 12),
+        "backfill_from": date(2010, 1, 1),
+        "weekdays": lambda d: {2, 5},
         "eras": [(date(1982, 6, 12), 49)],
     },
     "bc49": {
@@ -33,6 +42,10 @@ GAMES = {
         "main": 6,
         "bonus": "bonus",
         "start": date(1985, 1, 1),
+        "backfill_from": date(2010, 1, 1),
+        "weekdays": lambda d: {2, 5},
+        # the results page has no per-draw links; this is the site's usual pattern
+        "draw_url": "https://www.lotteryextreme.com/canada/bc49_numbers({d})",
         "eras": [(date(1985, 1, 1), 49)],
     },
     "dailygrand": {
@@ -42,6 +55,8 @@ GAMES = {
         "bonus": "grand",          # Grand Number, drawn from 1-7
         "bonus_pool": 7,
         "start": date(2016, 10, 20),
+        "backfill_from": date(2016, 10, 20),
+        "weekdays": lambda d: {0, 3},
         "eras": [(date(2016, 10, 20), 49)],
     },
 }
