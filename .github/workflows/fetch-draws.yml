@@ -1,0 +1,37 @@
+name: Fetch draw results
+
+on:
+  schedule:
+    # Daily at 09:17 UTC (about 2am in BC), after every game's evening draw
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Rebuild full history"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: fetcher/requirements.txt
+      - run: pip install -r fetcher/requirements.txt
+      - name: Fetch
+        run: python fetcher/fetch.py ${{ github.event.inputs.full == 'true' && '--full' || '' }}
+      - name: Commit updated data
+        run: |
+          git config user.name "lotto-lab-bot"
+          git config user.email "lotto-lab-bot@users.noreply.github.com"
+          git add docs/data
+          git diff --cached --quiet || git commit -m "data: update draws $(date -u +%F)"
+          git push

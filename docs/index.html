@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E6B66">
+<meta name="description" content="Randomness tests, expected value and smart picks for Canadian lotteries.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+<title>Lotto Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: sticky header with game switcher, one scrolling column (max 760px), fixed bottom tab bar. */
+:root{
+  --paper:#EEF2F1; --sheet:#FFFFFF; --ink:#12201F; --muted:#56676A; --line:#D3DDDB;
+  --accent:#0E6B66; --accent-soft:#D9EEEC; --ball:#F2B233; --ball-ink:#2A1D00;
+  --good:#2F7D4A; --warn:#9C6512; --bad:#B23A2E;
+  --f-display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0D1514; --sheet:#152120; --ink:#E4EEEC; --muted:#9AADAA; --line:#2A3A38;
+  --accent:#4CC2B8; --accent-soft:#163533; --ball:#F2B233; --ball-ink:#2A1D00;
+  --good:#5BBF7F; --warn:#E0A84A; --bad:#EE7B6C; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0D1514; --sheet:#152120; --ink:#E4EEEC; --muted:#9AADAA; --line:#2A3A38;
+  --accent:#4CC2B8; --accent-soft:#163533; --ball:#F2B233; --ball-ink:#2A1D00;
+  --good:#5BBF7F; --warn:#E0A84A; --bad:#EE7B6C; color-scheme:dark}
+
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 var(--f-body);
+  padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);border-bottom:1px solid var(--line)}
+header .wrap{padding-block:12px 10px;display:grid;gap:10px}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+h1{font:800 1.5rem/1 var(--f-display);margin:0;letter-spacing:-.01em}
+h1 span{color:var(--accent)}
+.meta{font:500 .72rem/1.3 var(--f-mono);color:var(--muted);text-align:right}
+.games{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.games::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--sheet);color:var(--ink);border-radius:999px;
+  padding:6px 12px;font:700 .85rem var(--f-body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--sheet)}
+main .wrap{padding-block:18px 24px;display:grid;gap:22px}
+section{display:grid;gap:12px;min-width:0}
+h2{font:800 1.2rem/1.2 var(--f-display);margin:0;text-wrap:balance}
+h3{font:600 1rem/1.3 var(--f-display);margin:0}
+p{margin:0;max-width:65ch}
+.lede{color:var(--muted)}
+.eyebrow{font:500 .7rem/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.card{background:var(--sheet);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:grid;gap:10px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.balls{display:flex;flex-wrap:wrap;gap:5px}
+.ball{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--ball);color:var(--ball-ink);
+  font:500 .8rem var(--f-mono);font-variant-numeric:tabular-nums;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12)}
+.ball.bonus{background:transparent;color:var(--ink);border:2px dashed var(--ball)}
+.draws{display:grid;gap:8px}
+.draw{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between}
+.draw time{font:500 .78rem var(--f-mono);color:var(--muted);min-width:88px}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 .7rem var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.scroll{overflow-x:auto}
+.pill{display:inline-block;border-radius:999px;padding:2px 9px;font:700 .75rem var(--f-body);white-space:nowrap}
+.pill.ok{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.pill.flag{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.pill.na{background:color-mix(in srgb,var(--muted) 16%,transparent);color:var(--muted)}
+.note{font-size:.88rem;color:var(--muted);max-width:65ch}
+.callout{border-left:3px solid var(--warn);padding:8px 12px;background:color-mix(in srgb,var(--warn) 9%,var(--sheet));border-radius:0 8px 8px 0;font-size:.92rem}
+.big{font:800 2.2rem/1 var(--f-display);font-variant-numeric:tabular-nums}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tile{display:grid;gap:4px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--sheet)}
+.tile b{font:800 1.25rem/1.1 var(--f-display);font-variant-numeric:tabular-nums}
+.tile span{font-size:.8rem;color:var(--muted)}
+label{display:grid;gap:4px;font-size:.82rem;color:var(--muted)}
+input,select{font:16px var(--f-body);color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+button.btn{border:0;border-radius:10px;padding:10px 16px;font:700 .95rem var(--f-body);cursor:pointer;background:var(--accent);color:var(--sheet)}
+button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+button.link{background:none;border:0;color:var(--accent);font:700 .85rem var(--f-body);cursor:pointer;padding:4px}
+td input{padding:5px 8px;text-align:right;font-family:var(--f-mono);font-size:.9rem}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font:500 9px var(--f-mono)}
+.tests{display:grid}.test{display:grid;gap:3px;padding:10px 0;border-bottom:1px solid var(--line)}.test:last-child{border-bottom:0}
+.pv{font:500 .78rem var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.flags{display:flex;flex-wrap:wrap;gap:5px}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--sheet);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
+nav.tabs a{display:grid;justify-items:center;gap:2px;padding:9px 4px 10px;color:var(--muted);text-decoration:none;font:700 .74rem var(--f-body)}
+nav.tabs a svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
+nav.tabs a[aria-current="page"]{color:var(--accent)}
+.empty{padding:20px;text-align:center;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.ball{animation:pop .25s ease-out both}@keyframes pop{from{transform:scale(.6)}to{transform:none}}}
+</style>
+
+<header>
+  <div class="wrap">
+    <div class="brand"><h1>Lotto <span>Lab</span></h1><div class="meta" id="meta">loading…</div></div>
+    <div class="games" id="games" role="group" aria-label="Game"></div>
+  </div>
+</header>
+
+<main><div class="wrap" id="view"></div></main>
+
+<nav class="tabs" aria-label="Sections"><div class="wrap">
+  <a href="#tests" data-tab="tests"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></svg>Tests</a>
+  <a href="#value" data-tab="value"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .9-3 2s1.3 1.7 3 2 3 .9 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5M12 6v2m0 8v2"/></svg>Value</a>
+  <a href="#picker" data-tab="picker"><svg viewBox="0 0 24 24"><circle cx="7" cy="8" r="3.5"/><circle cx="16.5" cy="7" r="2.5"/><circle cx="14" cy="16" r="4"/></svg>Picker</a>
+  <a href="#ledger" data-tab="ledger"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Ledger</a>
+</div></nav>
+
+<script>
+"use strict";
+/* ---------- game definitions ---------- */
+// Prize values for non-jackpot tiers are typical recent payouts; the Value tab lets you edit them.
+const GAMES = {
+  lottomax:{name:"Lotto Max",k:7,bonusType:"bonus",price:5,lines:4,jackpot:30e6,others:8e6,maxplus:true,
+    eras:[["2009-09-25",49],["2019-05-14",50],["2026-04-14",52]],
+    tiers:[{m:7,b:null,jackpot:true,label:"7/7"},{m:6,b:true,prize:150000,label:"6/7 + bonus"},{m:6,b:false,prize:4500,label:"6/7"},
+      {m:5,b:true,prize:1500,label:"5/7 + bonus"},{m:5,b:false,prize:100,label:"5/7"},{m:4,b:true,prize:50,label:"4/7 + bonus"},
+      {m:4,b:false,prize:20,label:"4/7"},{m:3,b:true,prize:20,label:"3/7 + bonus"},{m:3,b:false,prize:5,label:"3/7 (free play)"}]},
+  lotto649:{name:"Lotto 6/49",k:6,bonusType:"bonus",price:3,lines:1,jackpot:5e6,others:4e6,guaranteed:{prize:1e6,tickets:5e6},
+    eras:[["1982-06-12",49]],
+    tiers:[{m:6,b:null,jackpot:true,label:"6/6"},{m:5,b:true,prize:60000,label:"5/6 + bonus"},{m:5,b:false,prize:1500,label:"5/6"},
+      {m:4,b:null,prize:80,label:"4/6"},{m:3,b:null,prize:10,label:"3/6"},{m:2,b:true,prize:5,label:"2/6 + bonus"},{m:2,b:false,prize:3,label:"2/6 (free play)"}]},
+  bc49:{name:"BC/49",k:6,bonusType:"bonus",price:2,lines:1,jackpot:2e6,others:6e5,
+    eras:[["1985-01-01",49]],
+    tiers:[{m:6,b:null,jackpot:true,label:"6/6"},{m:5,b:true,prize:75000,label:"5/6 + bonus"},{m:5,b:false,prize:1000,label:"5/6"},
+      {m:4,b:null,prize:50,label:"4/6"},{m:3,b:null,prize:5,label:"3/6"},{m:2,b:true,prize:3,label:"2/6 + bonus"},{m:2,b:false,prize:2,label:"2/6 (free play)"}]},
+  dailygrand:{name:"Daily Grand",k:5,bonusType:"grand",bonusPool:7,price:3,lines:1,jackpot:7e6,others:0,fixedTop:true,
+    eras:[["2016-10-20",49]],
+    tiers:[{m:5,b:true,jackpot:true,label:"5/5 + Grand ($1,000/day; lump sum shown)"},{m:5,b:false,prize:500000,label:"5/5 ($25k/yr; lump sum)"},
+      {m:4,b:true,prize:1000,label:"4/5 + Grand"},{m:4,b:false,prize:500,label:"4/5"},{m:3,b:true,prize:100,label:"3/5 + Grand"},
+      {m:3,b:false,prize:20,label:"3/5"},{m:2,b:true,prize:10,label:"2/5 + Grand"},{m:1,b:true,prize:4,label:"1/5 + Grand"},{m:0,b:true,prize:3,label:"Grand only (free play)"}]}
+};
+const TABS=["tests","value","picker","ledger"];
+
+/* ---------- safe storage ---------- */
+const store={get(k,d){try{const v=localStorage.getItem("lottolab:"+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+  set(k,v){try{localStorage.setItem("lottolab:"+k,JSON.stringify(v))}catch(e){}}};
+
+/* ---------- math ---------- */
+function lnGamma(z){const g=7,c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  if(z<0.5)return Math.log(Math.PI/Math.sin(Math.PI*z))-lnGamma(1-z);z-=1;let x=c[0];for(let i=1;i<g+2;i++)x+=c[i]/(z+i);const t=z+g+0.5;return 0.5*Math.log(2*Math.PI)+(z+0.5)*Math.log(t)-t+Math.log(x)}
+function gammaQ(a,x){ // regularized upper incomplete gamma
+  if(x<=0)return 1;
+  if(x<a+1){let sum=1/a,del=sum,ap=a;for(let n=0;n<500;n++){ap++;del*=x/ap;sum+=del;if(Math.abs(del)<Math.abs(sum)*1e-14)break}
+    return Math.max(0,1-sum*Math.exp(-x+a*Math.log(x)-lnGamma(a)))}
+  let b=x+1-a,c=1e300,d=1/b,h=d;for(let i=1;i<500;i++){const an=-i*(i-a);b+=2;d=an*d+b;if(Math.abs(d)<1e-300)d=1e-300;c=b+an/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;const del=d*c;h*=del;if(Math.abs(del-1)<1e-14)break}
+  return Math.min(1,Math.exp(-x+a*Math.log(x)-lnGamma(a))*h)}
+const pChi=(x,df)=>gammaQ(df/2,x/2);
+function erfc(x){const z=Math.abs(x),t=1/(1+0.5*z);const r=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(0.37409196+t*(0.09678418+t*(-0.18628806+t*(0.27886807+t*(-1.13520398+t*(1.48851587+t*(-0.82215223+t*0.17087277)))))))));return x>=0?r:2-r}
+const pZ=z=>erfc(Math.abs(z)/Math.SQRT2);
+function C(n,r){if(r<0||r>n)return 0;r=Math.min(r,n-r);let v=1;for(let i=1;i<=r;i++)v=v*(n-r+i)/i;return v}
+const hyper=(x,N,K,n)=>C(K,x)*C(N-K,n-x)/C(N,n);
+function chiMerged(obs,exp){ // merge adjacent cells until expected >= 5
+  const cells=[];let o=0,e=0;for(let i=0;i<obs.length;i++){o+=obs[i];e+=exp[i];if(e>=5){cells.push([o,e]);o=0;e=0}}
+  if(e>0){if(cells.length){cells[cells.length-1][0]+=o;cells[cells.length-1][1]+=e}else cells.push([o,e])}
+  if(cells.length<2)return null;let chi=0;for(const[a,b]of cells)chi+=(a-b)**2/b;return{stat:chi,df:cells.length-1,p:pChi(chi,cells.length-1)}}
+function rand(n){const a=new Uint32Array(1);const lim=Math.floor(2**32/n)*n;let v;do{crypto.getRandomValues(a);v=a[0]}while(v>=lim);return v%n}
+function pick(k,N){const s=new Set();while(s.size<k)s.add(1+rand(N));return[...s].sort((a,b)=>a-b)}
+
+/* ---------- data ---------- */
+let state={game:store.get("game","lottomax"),tab:"tests",data:{},era:null,sim:null};
+const poolOf=era=>+String(era).split("/")[1];
+function eraFor(g,date){let p=g.eras[0][1];for(const[d,n]of g.eras)if(date>=d)p=n;return g.k+"/"+p}
+async function loadGame(key){
+  if(state.data[key])return state.data[key];
+  let draws=[],updated=null;
+  try{const r=await fetch("data/"+key+".json",{cache:"no-cache"});if(r.ok){const j=await r.json();draws=j.draws||[];updated=j.updated}}catch(e){}
+  const imported=store.get("import:"+key,[]);
+  if(imported.length){const m=new Map(draws.map(d=>[d.date,d]));for(const d of imported)m.set(d.date,d);draws=[...m.values()].sort((a,b)=>a.date<b.date?-1:1)}
+  return state.data[key]={draws,updated};
+}
+function eraDraws(){const d=state.data[state.game];return d?d.draws.filter(x=>x.era===state.era):[]}
+
+/* ---------- formatting ---------- */
+const cad=new Intl.NumberFormat("en-CA",{style:"currency",currency:"CAD",maximumFractionDigits:0});
+const cad2=new Intl.NumberFormat("en-CA",{style:"currency",currency:"CAD",minimumFractionDigits:2,maximumFractionDigits:2});
+const int=new Intl.NumberFormat("en-CA");
+const fmtP=p=>p==null?"—":p<0.001?"<0.001":p.toFixed(3);
+const oneIn=p=>p<=0?"—":"1 in "+int.format(Math.round(1/p));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ballsHTML=(nums,bonus)=>`<div class="balls">${nums.map(n=>`<span class="ball">${n}</span>`).join("")}${bonus!=null?`<span class="ball bonus" title="Bonus">${bonus}</span>`:""}</div>`;
+const pill=(p,a=0.01)=>p==null?`<span class="pill na">Need more draws</span>`:p<a?`<span class="pill flag">Unusual (p ${fmtP(p)})</span>`:`<span class="pill ok">Looks random</span>`;
+
+/* ---------- randomness tests ---------- */
+function runTests(draws,k,N){
+  const D=draws.length,out=[];if(D<2)return out;
+  // 1 frequency
+  const cnt=Array(N+1).fill(0);for(const d of draws)for(const n of d.main)cnt[n]++;
+  const E=D*k/N;let chi=0;for(let n=1;n<=N;n++)chi+=(cnt[n]-E)**2/E;chi*=(N-1)/(N-k);
+  out.push({name:"Number frequency",what:"Does every number come up about as often as chance predicts?",stat:chi,df:N-1,p:E>=5?pChi(chi,N-1):null});
+  // 2 odd/even  3 low/high
+  const oddPool=Math.ceil(N/2),lowPool=Math.floor(N/2);
+  const oddObs=Array(k+1).fill(0),lowObs=Array(k+1).fill(0);
+  for(const d of draws){oddObs[d.main.filter(n=>n%2).length]++;lowObs[d.main.filter(n=>n<=lowPool).length]++}
+  const oddExp=oddObs.map((_,j)=>D*hyper(j,N,oddPool,k)),lowExp=lowObs.map((_,j)=>D*hyper(j,N,lowPool,k));
+  const o=chiMerged(oddObs,oddExp),l=chiMerged(lowObs,lowExp);
+  out.push({name:"Odd / even mix",what:"How many odd numbers each draw has, against the exact expected spread.",stat:o?.stat,df:o?.df,p:o?.p??null});
+  out.push({name:"Low / high mix",what:`How many numbers from 1–${lowPool} each draw has.`,stat:l?.stat,df:l?.df,p:l?.p??null});
+  // 4 sum
+  const sums=draws.map(d=>d.main.reduce((a,b)=>a+b,0));const mu=k*(N+1)/2,sd=Math.sqrt(k*(N-k)*(N+1)/12);
+  const mean=sums.reduce((a,b)=>a+b,0)/D,z=(mean-mu)/(sd/Math.sqrt(D));
+  out.push({name:"Sum of numbers",what:`Average sum ${mean.toFixed(1)} vs ${mu.toFixed(1)} expected.`,stat:z,df:"z",p:D>=10?pZ(z):null});
+  // 5 repeats from previous draw
+  let rep=0;for(let i=1;i<D;i++){const s=new Set(draws[i-1].main);rep+=draws[i].main.filter(n=>s.has(n)).length}
+  const rm=k*k/N,rv=k*(k/N)*((N-k)/N)*((N-k)/(N-1)),rz=(rep-(D-1)*rm)/Math.sqrt((D-1)*rv);
+  out.push({name:"Repeats from last draw",what:`${rep} repeats vs ${((D-1)*rm).toFixed(1)} expected. Tests whether draws remember each other.`,stat:rz,df:"z",p:D>=20?pZ(rz):null});
+  // 6 lag-1 autocorrelation of sums
+  let num=0,den=0;for(let i=0;i<D;i++){den+=(sums[i]-mean)**2;if(i)num+=(sums[i]-mean)*(sums[i-1]-mean)}
+  const r=den?num/den:0,az=r*Math.sqrt(D);
+  out.push({name:"Draw-to-draw correlation",what:`Lag-1 correlation of sums r = ${r.toFixed(3)}. Tests for streaks or swings.`,stat:az,df:"z",p:D>=20?pZ(az):null});
+  // 7 gap test
+  const pp=k/N,gaps=Array(61).fill(0);let tot=0;const last=Array(N+1).fill(-1);
+  draws.forEach((d,i)=>{for(const n of d.main){if(last[n]>=0){const g=i-last[n];gaps[Math.min(g,60)-1+1]++;tot++}last[n]=i}});
+  const gObs=gaps.slice(1),gExp=gObs.map((_,i)=>{const g=i+1;return tot*(g<60?(1-pp)**(g-1)*pp:(1-pp)**59)});
+  const gt=chiMerged(gObs,gExp);
+  out.push({name:"Gaps between appearances",what:"How long numbers stay away, against the geometric spread a fair draw gives. This is the honest version of “overdue numbers”.",stat:gt?.stat,df:gt?.df,p:tot>=50?gt?.p??null:null});
+  return out;
+}
+function backtest(draws,k,N){
+  const D=draws.length,W=Math.min(50,Math.floor(D/3));if(D<W+15||W<10)return null;
+  const strat={hot:[],cold:[],overdue:[],random:[]};
+  for(let t=W;t<D;t++){
+    const cnt=Array(N+1).fill(0),seen=Array(N+1).fill(-1);
+    for(let i=t-W;i<t;i++)for(const n of draws[i].main)cnt[n]++;
+    for(let i=0;i<t;i++)for(const n of draws[i].main)seen[n]=i;
+    const nums=[...Array(N)].map((_,i)=>i+1);
+    const tie=()=>Math.random()-.5;
+    const hot=[...nums].sort((a,b)=>cnt[b]-cnt[a]||tie()).slice(0,k);
+    const cold=[...nums].sort((a,b)=>cnt[a]-cnt[b]||tie()).slice(0,k);
+    const od=[...nums].sort((a,b)=>seen[a]-seen[b]||tie()).slice(0,k);
+    const s=new Set(draws[t].main),hit=a=>a.filter(n=>s.has(n)).length;
+    strat.hot.push(hit(hot));strat.cold.push(hit(cold));strat.overdue.push(hit(od));strat.random.push(hit(pick(k,N)));
+  }
+  const n=D-W,mu=k*k/N,v=k*(k/N)*((N-k)/N)*((N-k)/(N-1));
+  return{W,n,mu,rows:Object.entries(strat).map(([key,a])=>{const avg=a.reduce((x,y)=>x+y,0)/n;const z=(avg-mu)/Math.sqrt(v/n);return{key,avg,z,p:pZ(z),three:a.filter(x=>x>=3).length}})};
+}
+function simulate(D,k,N){return Array.from({length:D},()=>({main:pick(k,N)}))}
+
+/* ---------- views ---------- */
+function freqChart(draws,k,N){
+  const D=draws.length,cnt=Array(N+1).fill(0);for(const d of draws)for(const n of d.main)cnt[n]++;
+  const E=D*k/N,sd=Math.sqrt(E*(1-k/N)*(N/(N-1)));const max=Math.max(...cnt,E+2.2*sd,1);
+  const W=640,H=200,L=26,B=22,T=8,bw=(W-L-6)/N,y=v=>T+(H-T-B)*(1-v/max);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Times each number was drawn, with the range chance allows">`;
+  for(const t of niceTicks(max))s+=`<line x1="${L}" x2="${W-4}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" stroke-width="1"/><text x="${L-4}" y="${y(t)+3}" text-anchor="end">${t}</text>`;
+  s+=`<rect x="${L}" y="${y(E+2*sd)}" width="${W-L-4}" height="${Math.max(0,y(Math.max(0,E-2*sd))-y(E+2*sd))}" fill="var(--accent)" opacity=".1"/>`;
+  for(let n=1;n<=N;n++){const out=Math.abs(cnt[n]-E)>2*sd;const x=L+3+(n-1)*bw;
+    s+=`<rect x="${x+bw*.12}" y="${y(cnt[n])}" width="${bw*.76}" height="${Math.max(0,H-B-y(cnt[n]))}" rx="1.5" fill="${out?"var(--ball)":"var(--accent)"}"><title>${n}: ${cnt[n]} times</title></rect>`;
+    if(n===1||n%5===0)s+=`<text x="${x+bw/2}" y="${H-7}" text-anchor="middle">${n}</text>`}
+  s+=`<line x1="${L}" x2="${W-4}" y1="${y(E)}" y2="${y(E)}" stroke="var(--ink)" stroke-dasharray="4 3" stroke-width="1"/></svg>`;
+  const outs=[...Array(N)].map((_,i)=>i+1).filter(n=>Math.abs(cnt[n]-E)>2*sd);
+  return{svg:s,outs,E,sd};
+}
+function niceTicks(max){const step=max<=10?2:max<=25?5:max<=60?10:max<=150?25:max<=300?50:100;const t=[];for(let v=0;v<=max;v+=step)t.push(v);return t}
+
+function viewTests(){
+  const g=GAMES[state.game],all=state.data[state.game].draws,draws=eraDraws(),N=poolOf(state.era),k=g.k,D=draws.length;
+  if(!all.length)return emptyData();
+  const tests=runTests(draws,k,N);
+  if(!state.sim||state.sim.key!==state.game+state.era+D)state.sim={key:state.game+state.era+D,res:runTests(simulate(D,k,N),k,N)};
+  const ch=freqChart(draws,k,N),bt=backtest(draws,k,N);
+  const recent=draws.slice(-6).reverse();
+  const flagged=tests.filter(t=>t.p!=null&&t.p<0.01).length,ran=tests.filter(t=>t.p!=null).length;
+  const verdict=ran===0?"Not enough draws in this format yet to test anything.":flagged===0?`All ${ran} tests are consistent with a fair random draw.`:`${flagged} of ${ran} tests flagged. With several tests, an occasional flag happens by chance. Check whether it persists as more draws arrive.`;
+  return `
+  <section>
+    <span class="eyebrow">${esc(g.name)} · format ${state.era} · ${int.format(D)} draws</span>
+    <h2>Can these draws be predicted?</h2>
+    <p class="lede">${verdict}</p>
+    ${eraSelect()}
+  </section>
+  <section class="card">
+    <h3>Latest draws</h3>
+    <div class="draws">${recent.map(d=>`<div class="draw"><time datetime="${d.date}">${d.date}</time>${ballsHTML(d.main,d.bonus)}</div>`).join("")}</div>
+  </section>
+  <section class="card">
+    <h3>Randomness tests</h3>
+    <p class="note">p is the chance of seeing a result this extreme from a fair draw. Below 0.01 is flagged. The right column runs the same tests on ${int.format(D)} draws from a simulated, perfectly fair machine for comparison.</p>
+    <div class="tests">${tests.map((t,i)=>`<div class="test"><div class="row" style="justify-content:space-between"><b>${t.name}</b>${pill(t.p)}</div>
+      <span class="note">${t.what}</span><span class="pv">p ${fmtP(t.p)} · fair sim p ${fmtP(state.sim.res[i]?.p)}</span></div>`).join("")}</div>
+    <div class="row"><button class="btn ghost" id="resim">Re-run simulation</button></div>
+  </section>
+  <section class="card chart">
+    <h3>How often each number came up</h3>
+    <p class="note">Dashed line: the expected ${ch.E.toFixed(1)} draws per number. Shaded band: the normal range for chance (±2σ). About 1 number in 20 lands outside it even in a perfectly fair game; those are shown in gold${ch.outs.length?`: ${ch.outs.join(", ")}`:""}.</p>
+    <div class="scroll">${D?ch.svg:'<div class="empty">No draws in this format.</div>'}</div>
+  </section>
+  <section class="card">
+    <h3>Do “hot”, “cold” or “overdue” numbers work?</h3>
+    ${bt?`<p class="note">For each of the last ${bt.n} draws, each strategy picked ${k} numbers using only the ${bt.W} draws before it, then we counted matches. Chance alone predicts ${bt.mu.toFixed(3)} matches per pick.</p>
+    <div class="scroll"><table><thead><tr><th>Strategy</th><th class="num">Avg matches</th><th class="num">vs chance</th><th class="num">p</th></tr></thead><tbody>
+    ${bt.rows.map(r=>`<tr><td>${({hot:"Hot numbers",cold:"Cold numbers",overdue:"Most overdue",random:"Pure random"})[r.key]}</td><td class="num">${r.avg.toFixed(3)}</td><td class="num">${(r.avg-bt.mu>=0?"+":"")+(r.avg-bt.mu).toFixed(3)}</td><td class="num">${fmtP(r.p)}</td></tr>`).join("")}
+    </tbody></table></div>
+    <p class="note">If a strategy had an edge, it would beat “Pure random” consistently and its p would stay below 0.01 as the history grows.</p>`
+    :`<p class="note">Needs at least 25 draws in this format. The GitHub fetcher fills in the full history.</p>`}
+  </section>
+  ${importCard()}`;
+}
+
+function eraSelect(){
+  const eras=[...new Set(state.data[state.game].draws.map(d=>d.era))];
+  if(eras.length<2)return"";
+  return `<label style="max-width:260px">Number format<select id="era">${eras.map(e=>`<option value="${e}" ${e===state.era?"selected":""}>${e} (${state.data[state.game].draws.filter(d=>d.era===e).length} draws)</option>`).join("")}</select></label>`;
+}
+function emptyData(){
+  return `<section><span class="eyebrow">${esc(GAMES[state.game].name)}</span><h2>No draw history yet</h2>
+  <p class="lede">The daily GitHub fetch fills this in. Until then, you can import a CSV with one draw per line: <code>date,n1,…,nk,bonus</code>.</p></section>${importCard()}`;
+}
+function importCard(){
+  return `<section class="card"><h3>Import draws</h3><p class="note">CSV, one draw per line: <code>2026-10-23,8,21,23,28,30,39,47,17</code> (bonus optional). Imported draws stay on this device.</p>
+  <label>CSV file<input type="file" id="csv" accept=".csv,text/csv,text/plain"></label><p class="note" id="csvmsg"></p></section>`;
+}
+
+/* ---------- value ---------- */
+function valueCfg(){const g=GAMES[state.game];const saved=store.get("cfg:"+state.game,{});
+  return{price:g.price,lines:g.lines,jackpot:g.jackpot,others:g.others,maxplus:0,gPrize:g.guaranteed?.prize??0,gTickets:g.guaranteed?.tickets??1,
+    prizes:g.tiers.map(t=>t.prize??null),...saved,prizes:saved.prizes&&saved.prizes.length===g.tiers.length?saved.prizes:g.tiers.map(t=>t.prize??null)}}
+function tierProbs(g,N){
+  const k=g.k,Ck=C(N,k);
+  return g.tiers.map(t=>{const pm=C(k,t.m)*C(N-k,k-t.m)/Ck;let pb;
+    if(g.bonusType==="grand")pb=1/(g.bonusPool||7);else pb=(k-t.m)/(N-k);
+    return t.b===null?pm:t.b?pm*pb:pm*(1-pb)});
+}
+function computeEV(cfg){
+  const g=GAMES[state.game],N=poolOf(state.era||eraFor(g,"9999")),probs=tierProbs(g,N),combos=C(N,g.k);
+  const lam=g.fixedTop?0:Math.max(0,cfg.others)/combos,share=lam>1e-9?(1-Math.exp(-lam))/lam:1;
+  let a=0,b=0;
+  g.tiers.forEach((t,i)=>{if(t.jackpot)b+=probs[i]*share;else a+=probs[i]*(cfg.prizes[i]||0)});
+  if(g.maxplus&&cfg.maxplus>0)a+=cfg.maxplus/combos*100000*share;
+  const perLine=a+b*cfg.jackpot,ticket=perLine*cfg.lines+(g.guaranteed&&cfg.gTickets>0?cfg.gPrize/cfg.gTickets:0);
+  const ret=ticket/cfg.price,breakeven=b>0?(cfg.price-(ticket-b*cfg.jackpot*cfg.lines))/(b*cfg.lines):null;
+  const anyPrize=1-Math.pow(1-probs.reduce((x,p,i)=>x+((cfg.prizes[i]||g.tiers[i].jackpot)?p:0),0),cfg.lines);
+  return{probs,share,ticket,ret,breakeven,anyPrize,N,combos};
+}
+function viewValue(){
+  const g=GAMES[state.game],cfg=valueCfg(),r=computeEV(cfg);
+  const tone=r.ret>=1?"var(--good)":r.ret>=0.6?"var(--warn)":"var(--bad)";
+  return `
+  <section>
+    <span class="eyebrow">${esc(g.name)} · ${g.k}/${r.N} · ${cad.format(cfg.price)} for ${cfg.lines} line${cfg.lines>1?"s":""}</span>
+    <h2>What is the next ticket worth?</h2>
+    <p class="lede">This is the expected payout: the average you get back per ticket over millions of tickets. It is the one number statistics can actually improve, by choosing which draws to play.</p>
+  </section>
+  <section class="card">
+    <div class="row" style="justify-content:space-between;align-items:end">
+      <div><div class="eyebrow">Back per $1 spent</div><div class="big" style="color:${tone}">${cad2.format(r.ret)}</div></div>
+      <div class="pill ${r.ret>=1?"ok":"flag"}">${r.ret>=1?"Positive expected value":"Costs "+cad2.format(1-r.ret)+" per $1 on average"}</div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><b>${cad2.format(r.ticket)}</b><span>Expected payout per ticket</span></div>
+      <div class="tile"><b>${oneIn(r.probs[0]*cfg.lines)}</b><span>Top-prize odds per ticket</span></div>
+      <div class="tile"><b>${oneIn(r.anyPrize)}</b><span>Odds of any prize per ticket</span></div>
+      <div class="tile"><b>${g.fixedTop?"Not shared":Math.round(r.share*100)+"%"}</b><span>${g.fixedTop?"Top prize is fixed":"Average jackpot share if you win"}</span></div>
+    </div>
+    ${r.breakeven&&r.breakeven>0&&!g.fixedTop?`<p class="note">Break-even jackpot with these settings: <b>${cad.format(r.breakeven)}</b>. Bigger jackpots also sell more tickets, which shrinks your share.</p>`:""}
+  </section>
+  <section class="card">
+    <h3>Next draw</h3>
+    <div class="form">
+      <label>${g.fixedTop?"Top prize lump sum":"Jackpot"} (CAD)<input id="v-jackpot" inputmode="numeric" value="${cfg.jackpot}"></label>
+      ${g.maxplus?`<label>MaxPlus $100k prizes<input id="v-maxplus" inputmode="numeric" value="${cfg.maxplus}"></label>`:""}
+      ${g.fixedTop?"":`<label>Other lines sold (estimate)<input id="v-others" inputmode="numeric" value="${cfg.others}"></label>`}
+      <label>Ticket price<input id="v-price" inputmode="decimal" value="${cfg.price}"></label>
+      <label>Lines per ticket<input id="v-lines" inputmode="numeric" value="${cfg.lines}"></label>
+      ${g.guaranteed?`<label>Guaranteed draw prize<input id="v-gPrize" inputmode="numeric" value="${cfg.gPrize}"></label><label>Tickets in that draw<input id="v-gTickets" inputmode="numeric" value="${cfg.gTickets}"></label>`:""}
+    </div>
+    <p class="note">Jackpot and lines sold are the inputs that move the answer. Use the advertised jackpot; lines sold is a rough estimate (big jackpots sell far more).</p>
+  </section>
+  <section class="card">
+    <h3>Prize tiers</h3>
+    <p class="note">Odds are exact for the ${g.k}/${r.N} format. Prize amounts are typical recent payouts; pool-based prizes change every draw, so edit them to match a real prize breakdown. Canadian lottery prizes are not taxed.</p>
+    <div class="scroll"><table><thead><tr><th>Match</th><th class="num">Odds per line</th><th class="num">Prize</th></tr></thead><tbody>
+    ${g.tiers.map((t,i)=>`<tr><td>${t.label}</td><td class="num">${oneIn(r.probs[i])}</td><td class="num">${t.jackpot?(g.fixedTop?cad.format(cfg.jackpot):"Jackpot"):`<input data-tier="${i}" inputmode="decimal" value="${cfg.prizes[i]}" aria-label="Prize for ${t.label}" style="max-width:110px">`}</td></tr>`).join("")}
+    </tbody></table></div>
+    <div class="row"><button class="link" id="v-reset">Reset to defaults</button></div>
+  </section>`;
+}
+
+/* ---------- picker ---------- */
+function popularity(line,N,k,history){
+  const f=[];const s=[...line].sort((a,b)=>a-b);
+  if(s.filter(n=>n<=31).length>=k-1)f.push("Mostly birthday numbers (1–31)");
+  let run=1,best=1;for(let i=1;i<k;i++){run=s[i]===s[i-1]+1?run+1:1;best=Math.max(best,run)}if(best>=3)f.push(`${best} numbers in a row`);
+  const st=s[1]-s[0];if(s.every((n,i)=>!i||n-s[i-1]===st))f.push("Evenly spaced pattern");
+  const dec={};for(const n of s)dec[Math.floor((n-1)/10)]=(dec[Math.floor((n-1)/10)]||0)+1;if(Math.max(...Object.values(dec))>=Math.ceil(k*0.6))f.push("Crowded into one decade");
+  const ld={};for(const n of s)ld[n%10]=(ld[n%10]||0)+1;if(Math.max(...Object.values(ld))>=4)f.push("Same last digit");
+  if(s.filter(n=>n%7===0).length>=3||s.filter(n=>n%5===0).length>=4)f.push("Many multiples of 5 or 7");
+  if(s.includes(7)&&s.filter(n=>[3,7,11,13,21].includes(n)).length>=3)f.push("Lucky-number cluster");
+  const set=new Set(s);for(const d of history){if(d.main.filter(n=>set.has(n)).length>=k-1){f.push("Copies a past winning line");break}}
+  return f;
+}
+function viewPicker(){
+  const g=GAMES[state.game],N=poolOf(state.era||eraFor(g,"9999")),k=g.k,lines=state.picks&&state.picks.key===state.game+N?state.picks.lines:null;
+  return `
+  <section>
+    <span class="eyebrow">${esc(g.name)} · pick ${k} from ${N}</span>
+    <h2>Smart picks</h2>
+    <p class="lede">Every line has the same odds. These lines are random but skip the patterns many players choose, like birthdays, runs and past winners, so a win is less likely to be split.</p>
+    <div class="row"><label style="width:130px">Lines<select id="p-count">${[1,2,3,4,5,6,8,10].map(n=>`<option ${n===(state.pickCount||g.lines)?"selected":""}>${n}</option>`).join("")}</select></label>
+    <button class="btn" id="p-go" style="align-self:end">Generate</button></div>
+  </section>
+  ${lines?`<section class="card"><div class="draws">${lines.map(l=>`<div class="draw">${ballsHTML(l)}<span class="pill ok">No popular patterns</span></div>`).join("")}</div>
+  <div class="row"><button class="btn ghost" id="p-copy">Copy numbers</button><span class="note" id="p-msg"></span></div></section>`:""}
+  <section class="card">
+    <h3>Check your own numbers</h3>
+    <label>Your ${k} numbers, separated by spaces or commas<input id="p-check" inputmode="numeric" placeholder="e.g. 4 13 20 31 37 43 51" value="${esc(state.checkText||"")}"></label>
+    <div id="p-result">${checkHTML()}</div>
+  </section>`;
+}
+function checkHTML(){
+  const g=GAMES[state.game],N=poolOf(state.era||eraFor(g,"9999")),k=g.k,t=state.checkText||"";
+  const nums=[...new Set((t.match(/\d+/g)||[]).map(Number))];if(!nums.length)return"";
+  if(nums.length!==k||nums.some(n=>n<1||n>N))return `<p class="note">Enter ${k} different numbers from 1 to ${N}.</p>`;
+  const hist=eraDraws(),flags=popularity(nums,N,k,hist),set=new Set(nums);
+  const dist=Array(k+1).fill(0);let best=null;for(const d of hist){const m=d.main.filter(n=>set.has(n)).length;dist[m]++;if(!best||m>best.m)best={m,d}}
+  return `<div class="flags">${flags.length?flags.map(f=>`<span class="pill flag">${f}</span>`).join(""):'<span class="pill ok">No popular patterns</span>'}</div>
+  ${hist.length?`<p class="note">Against ${int.format(hist.length)} past draws in this format: best match ${best.m}/${k} (${best.d.date}). Matched 3 or more ${dist.slice(3).reduce((a,b)=>a+b,0)} times; chance predicts ${(hist.length*dist.map((_,j)=>j>=3?hyper(j,N,k,k):0).reduce((a,b)=>a+b,0)).toFixed(1)}. Past matches say nothing about future draws.</p>`:""}`;
+}
+
+/* ---------- ledger ---------- */
+function viewLedger(){
+  const L=store.get("ledger",[]),cap=store.get("cap",50),today=new Date().toISOString().slice(0,10),ym=today.slice(0,7);
+  const month=L.filter(e=>e.date.startsWith(ym)),spent=month.reduce((a,e)=>a+e.cost,0),won=month.reduce((a,e)=>a+e.prize,0);
+  const tSpent=L.reduce((a,e)=>a+e.cost,0),tWon=L.reduce((a,e)=>a+e.prize,0),g=GAMES[state.game];
+  const pct=cap>0?Math.min(100,spent/cap*100):0;
+  return `
+  <section>
+    <span class="eyebrow">This month · ${ym}</span>
+    <h2>Spending ledger</h2>
+    <div class="tiles">
+      <div class="tile"><b>${cad2.format(spent)}</b><span>Spent of ${cad.format(cap)} cap</span></div>
+      <div class="tile"><b>${cad2.format(won)}</b><span>Won this month</span></div>
+      <div class="tile"><b style="color:${tWon-tSpent>=0?"var(--good)":"var(--bad)"}">${cad2.format(tWon-tSpent)}</b><span>Net, all time</span></div>
+      <div class="tile"><b>${tSpent?Math.round(tWon/tSpent*100)+"%":"—"}</b><span>Returned, all time</span></div>
+    </div>
+    <div style="height:8px;border-radius:99px;background:var(--line);overflow:hidden" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Monthly cap used"><div style="height:100%;width:${pct}%;background:${pct>=100?"var(--bad)":pct>=80?"var(--warn)":"var(--accent)"}"></div></div>
+    ${spent>=cap&&cap>0?`<p class="callout">You've reached this month's cap.</p>`:""}
+  </section>
+  <section class="card">
+    <h3>Add a ticket</h3>
+    <form class="form" id="l-form">
+      <label>Date<input type="date" id="l-date" value="${today}"></label>
+      <label>Game<select id="l-game">${Object.entries(GAMES).map(([k,v])=>`<option value="${k}" ${k===state.game?"selected":""}>${v.name}</option>`).join("")}</select></label>
+      <label>Cost<input id="l-cost" inputmode="decimal" value="${g.price}"></label>
+      <label>Prize won<input id="l-prize" inputmode="decimal" value="0"></label>
+      <button class="btn" style="align-self:end">Add</button>
+    </form>
+    <label style="max-width:200px">Monthly cap (CAD)<input id="l-cap" inputmode="numeric" value="${cap}"></label>
+  </section>
+  <section class="card">
+    <h3>Tickets</h3>
+    ${L.length?`<div class="scroll"><table><thead><tr><th>Date</th><th>Game</th><th class="num">Cost</th><th class="num">Won</th><th></th></tr></thead><tbody>
+    ${[...L].map((e,i)=>({e,i})).reverse().map(({e,i})=>`<tr><td class="num" style="text-align:left">${e.date}</td><td>${GAMES[e.game]?.name||e.game}</td><td class="num">${cad2.format(e.cost)}</td><td class="num">${cad2.format(e.prize)}</td><td><button class="link" data-del="${i}">${state.confirmDel===i?"Confirm":"Delete"}</button></td></tr>`).join("")}
+    </tbody></table></div>`:`<div class="empty">No tickets yet. Add one above to start tracking.</div>`}
+  </section>`;
+}
+
+/* ---------- render + events ---------- */
+async function render(){
+  const g=GAMES[state.game];
+  document.getElementById("games").innerHTML=Object.entries(GAMES).map(([k,v])=>`<button class="chip" data-game="${k}" aria-pressed="${k===state.game}">${v.name}</button>`).join("");
+  document.querySelectorAll("nav.tabs a").forEach(a=>a.setAttribute("aria-current",a.dataset.tab===state.tab?"page":"false"));
+  const data=await loadGame(state.game);
+  const eras=[...new Set(data.draws.map(d=>d.era))];
+  if(!state.era||!eras.includes(state.era))state.era=eras.length?eras[eras.length-1]:eraFor(g,"9999");
+  document.getElementById("meta").innerHTML=data.draws.length?`${int.format(data.draws.length)} draws<br>to ${data.draws[data.draws.length-1].date}`:"no data yet";
+  const v=document.getElementById("view");
+  v.innerHTML=({tests:viewTests,value:viewValue,picker:viewPicker,ledger:viewLedger})[state.tab]();
+}
+document.addEventListener("click",async e=>{
+  const t=e.target.closest("button,[data-game]");if(!t)return;
+  if(t.dataset.game){state.game=t.dataset.game;store.set("game",state.game);state.era=null;state.picks=null;state.sim=null;render();return}
+  if(t.id==="resim"){state.sim=null;render();return}
+  if(t.id==="p-go"){const g=GAMES[state.game],N=poolOf(state.era),k=g.k,n=+document.getElementById("p-count").value;state.pickCount=n;
+    const hist=eraDraws(),lines=[];let guard=0;while(lines.length<n&&guard++<20000){const l=pick(k,N);if(!popularity(l,N,k,hist).length&&!lines.some(x=>x.join()===l.join()))lines.push(l)}
+    state.picks={key:state.game+N,lines};render();return}
+  if(t.id==="p-copy"){const txt=state.picks.lines.map(l=>l.join(" ")).join("\n");const msg=document.getElementById("p-msg");
+    try{await navigator.clipboard.writeText(txt);msg.textContent="Copied"}catch(err){msg.textContent=txt}return}
+  if(t.id==="v-reset"){store.set("cfg:"+state.game,{});render();return}
+  if(t.dataset.del!=null){const i=+t.dataset.del;if(state.confirmDel===i){const L=store.get("ledger",[]);L.splice(i,1);store.set("ledger",L);state.confirmDel=null}else state.confirmDel=i;render()}
+});
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.id==="era"){state.era=t.value;state.sim=null;render()}
+  if(t.id&&t.id.startsWith("v-")||t.dataset.tier!=null){const cfg=valueCfg();
+    if(t.dataset.tier!=null)cfg.prizes[+t.dataset.tier]=parseFloat(t.value.replace(/[^\d.]/g,""))||0;
+    else cfg[t.id.slice(2)]=parseFloat(t.value.replace(/[^\d.]/g,""))||0;
+    store.set("cfg:"+state.game,cfg);render()}
+  if(t.id==="l-cap"){store.set("cap",parseFloat(t.value)||0);render()}
+  if(t.id==="csv"&&t.files[0]){const g=GAMES[state.game],r=new FileReader();r.onload=()=>{
+    const rows=[];let bad=0;for(const line of String(r.result).split(/\r?\n/)){const p=line.split(/[,;\t ]+/).filter(Boolean);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(p[0]||"")){if(line.trim())bad++;continue}
+      const nums=p.slice(1).map(Number),era=eraFor(g,p[0]),N=poolOf(era),main=nums.slice(0,g.k);
+      if(main.length<g.k||new Set(main).size<g.k||main.some(n=>!(n>=1&&n<=N))){bad++;continue}
+      rows.push({date:p[0],main:main.sort((a,b)=>a-b),bonus:nums[g.k]??null,era})}
+    const prev=store.get("import:"+state.game,[]),m=new Map(prev.map(d=>[d.date,d]));rows.forEach(d=>m.set(d.date,d));store.set("import:"+state.game,[...m.values()]);
+    delete state.data[state.game];state.sim=null;render().then(()=>{const el=document.getElementById("csvmsg");if(el)el.textContent=`Imported ${rows.length} draws${bad?`, skipped ${bad} lines that weren't valid`:""}.`})};r.readAsText(t.files[0])}
+});
+document.addEventListener("input",e=>{if(e.target.id==="p-check"){state.checkText=e.target.value;document.getElementById("p-result").innerHTML=checkHTML()}});
+document.addEventListener("submit",e=>{if(e.target.id!=="l-form")return;e.preventDefault();
+  const L=store.get("ledger",[]);L.push({date:document.getElementById("l-date").value,game:document.getElementById("l-game").value,
+    cost:parseFloat(document.getElementById("l-cost").value)||0,prize:parseFloat(document.getElementById("l-prize").value)||0});
+  L.sort((a,b)=>a.date<b.date?-1:1);store.set("ledger",L);render()});
+function route(){const h=location.hash.slice(1);state.tab=TABS.includes(h)?h:"tests";render()}
+window.addEventListener("hashchange",route);
+document.querySelectorAll("nav.tabs a").forEach(a=>a.addEventListener("click",ev=>{ev.preventDefault();state.tab=a.dataset.tab;try{history.replaceState(null,"","#"+state.tab)}catch(e){}render();window.scrollTo(0,0)}));
+route();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
