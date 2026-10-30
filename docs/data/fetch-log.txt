@@ -1,13 +1,13 @@
-Run 2026-10-29T20:18:11+00:00
+Run 2026-10-30T00:59:14+00:00
 Lotto Max: results page gave 20 draws
 Lotto Max: 0 past draws missing (draw schedule); fetching up to 250
 Lotto Max: backfilled 0 draws
 Lotto Max: 819 -> 819 draws saved
 Lotto 6/49: results page gave 20 draws
-Lotto 6/49: 409 past draws missing (draw schedule); fetching up to 250
+Lotto 6/49: 384 past draws missing (draw schedule); fetching up to 250
 Lotto 6/49: 25 draw pages in a row failed to parse; stopping backfill
 Lotto 6/49: backfilled 0 draws
-Lotto 6/49: 864 -> 865 draws saved
+Lotto 6/49: 865 -> 865 draws saved
 BC/49: results page gave 20 draws
 BC/49: no per-draw page link found; only keeping current draws
 BC/49: 22 -> 22 draws saved
