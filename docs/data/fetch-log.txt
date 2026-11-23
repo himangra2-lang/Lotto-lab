@@ -1,4 +1,4 @@
-Run 2026-11-23T01:40:24+00:00
+Run 2026-11-23T12:26:58+00:00
 Lotto Max: results page gave 20 draws
 Lotto Max: 0 past draws missing (draw schedule); fetching up to 250
 Lotto Max: backfilled 0 draws
